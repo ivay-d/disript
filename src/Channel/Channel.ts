@@ -1,3 +1,8 @@
+interface ISendOptions {
+  content: string;
+  flags?: number;
+}
+
 /** Utilizies the .send function for getChannel.
  * @param {string} id - Channel ID to send message
  * @param {string} token - Your bots password
@@ -16,14 +21,18 @@ export class Channel {
    * @returns {Promise<void>}
    * @throws {Error}
    */
-  async send(content: string): Promise<void> {
+  async send(content: string | ISendOptions): Promise<void> {
     const res = await fetch(`https://discord.com/api/v10/channels/${this.id}/messages`, {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bot ${this.token}`, // What if I remove Bot text? 🤔
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content })
+      body: JSON.stringify(
+        typeof content === 'string'
+          ? { content, flags: 0 }
+          : { content: content.content, flags: content.flags ?? 0 },
+      ),
     });
 
     if (!res.ok) {

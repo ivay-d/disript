@@ -1,12 +1,11 @@
-import Webstock from "ws";
-import os from "os";
-import { EventEmitter } from "events"
-import { Message } from "../Message"
-import { Channel } from "../Channel"
+import Webstock from 'ws';
+import os from 'os';
+import { EventEmitter } from 'events';
+import { Message } from '../Message';
+import { Channel } from '../Channel';
 
-const ws = new Webstock("wss://gateway.discord.gg/?v=10&encoding=json");
+const ws = new Webstock('wss://gateway.discord.gg/?v=10&encoding=json');
 
-let token: string = "";
 /** @param {string} token - Token of your bot
  *
  * @example
@@ -45,12 +44,13 @@ export class Client extends EventEmitter {
   /** Stores your bot token */
   token: string;
   /** Stores current guild id */
-  guild: string = "";
+  guild: string = '';
+  /** Adds mobile status */
+  mobile: boolean = false;
 
   constructor(token: string) {
     super();
     this.token = token;
-    token = token;
   }
 
   /**
@@ -72,37 +72,72 @@ export class Client extends EventEmitter {
             ws.send(JSON.stringify({ op: 1, d: null }));
           }, d.heartbeat_interval);
 
-          ws.send(JSON.stringify({
-            op: 2,
-            d: {
-              token: this.token,
-              // Intents (woah)
-              intents: 33281,
-              properties: {
-                os: os.platform(),
-                browser: 'Discord Client',
-                device: os.hostname()
-              }
-            }
-          }));
+          ws.send(
+            JSON.stringify({
+              op: 2,
+              d: {
+                token: this.token,
+                // Intents (woah)
+                intents: 33283,
+                properties: {
+                  os: os.platform(),
+                  browser: this.mobile ? 'Discord Android' : 'Discord Client',
+                  device: os.hostname(),
+                },
+              },
+            }),
+          );
           break;
-        
+
         case 0:
           switch (payload.t) {
-            case "READY":
-              this.emit("ready", payload.d)
+            case 'READY':
+              this.emit('ready', payload.d);
               break;
-            case "MESSAGE_CREATE":
-              if (!this.loaded) return; // Checks if guilds are available 
+            case 'MESSAGE_CREATE':
+              if (!this.loaded) return; // Checks if guilds are available
               const msg = new Message(payload.d, this.token); // Activates the "send" function and objects
-              this.emit("newMessage", msg)
+              this.emit('newMessage', msg);
               break;
-            case "GUILD_CREATE":
+            case 'GUILD_CREATE':
               this.loaded = true; // Now you can use newMessage event yayay
               this.guild = payload.d.id;
-        
-              this.emit("guildLoaded", payload.d);
+
+              this.emit('guildLoaded', payload.d);
               break;
+            case 'GUILD_MEMBER_ADD':
+              this.emit('newMember', payload.d);
+              break;
+            case 'INTERACTION_CREATE':
+              switch (payload.d.type) {
+                case 1:
+                  // Ping... Pong!
+                  fetch(
+                    `https://discord.com/api/v10/interactions/${payload.d.id}/${payload.d.token}/callback`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ type: 1 }),
+                    },
+                  );
+                  break;
+                case 2:
+                  this.emit('newSlash', payload.d);
+                  break;
+                case 3:
+                  this.emit('newComponent', payload.d);
+                  break;
+                case 4:
+                  this.emit('newAutocomplete', payload.d);
+                  break;
+                case 5:
+                  this.emit('newModal', payload.d);
+                  break;
+                default:
+                  console.warn(`Unknown type: ${payload.d.type}.`);
+                  break;
+                  break;
+              }
           }
         case 11:
           break;
@@ -110,7 +145,7 @@ export class Client extends EventEmitter {
     });
   }
   /** @param {string} channel - Checks the current guild and gets the channel object.
-   * @see {@link Channel]
+   * @see {@link Channel}
    * @returns {Promise<Channel>}
    * @throws {Error}
    */
@@ -120,14 +155,14 @@ export class Client extends EventEmitter {
 
     if (id) {
       const res = await fetch(`https://discord.com/api/v10/channels/${channel}`, {
-        headers: { Authorization: `Bot ${this.token}` }
+        headers: { Authorization: `Bot ${this.token}` },
       });
 
       if (!res.ok) throw new Error(`Failed to fetch channel by ID, ${res.status}`);
       chan = await res.json();
     } else {
       const res = await fetch(`https://discord.com/api/v10/guilds/${this.guild}/channels`, {
-        headers: { Authorization: `Bot ${this.token}` }
+        headers: { Authorization: `Bot ${this.token}` },
       });
 
       if (!res.ok) throw new Error(`Failed to fetch channels for guild, ${res.status}`);

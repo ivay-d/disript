@@ -1,0 +1,35 @@
+/** Utilizies the .send function for getChannel.
+ * @param {string} id - Channel ID to send message
+ * @param {string} token - Your bots password
+ */
+export class Channel {
+  id: string;
+  token: string;
+
+  constructor(channelId: string, token: string) {
+    /** Channel ID */
+    this.channelId = channelId;
+    /** Bot Token */
+    this.token = token;
+  }
+  /** @param {string} content - The text to send
+   * @returns {Promise<void>}
+   * @throws {Error}
+   */
+  async send(content: string): Promise<void> {
+    const res = await fetch(`https://discord.com/api/v10/channels/${this.channelId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${this.token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ content })
+    });
+
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Failed to send message, ${res.status} & ${err}`);
+    }
+  }
+  async delete(
+}

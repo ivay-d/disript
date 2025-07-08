@@ -25,7 +25,9 @@ class Channel {
                 Authorization: `Bot ${this.token}`, // What if I remove Bot text? 🤔
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ content })
+            body: JSON.stringify(typeof content === "string"
+                ? { content, flags: 0 }
+                : { content: content.content, flags: content.flags ?? 0 })
         });
         if (!res.ok) {
             const err = await res.text();

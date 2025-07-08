@@ -50,6 +50,8 @@ class Client extends events_1.EventEmitter {
     token;
     /** Stores current guild id */
     guild = "";
+    /** Adds mobile status */
+    mobile = false;
     constructor(token) {
         super();
         this.token = token;
@@ -76,10 +78,10 @@ class Client extends events_1.EventEmitter {
                         d: {
                             token: this.token,
                             // Intents (woah)
-                            intents: 33281,
+                            intents: 33283,
                             properties: {
                                 os: os_1.default.platform(),
-                                browser: 'Discord Client',
+                                browser: this.mobile ? "Discord Android" : "Discord Client",
                                 device: os_1.default.hostname()
                             }
                         }
@@ -101,6 +103,37 @@ class Client extends events_1.EventEmitter {
                             this.guild = payload.d.id;
                             this.emit("guildLoaded", payload.d);
                             break;
+                        case "GUILD_MEMBER_ADD":
+                            this.emit("newMember", payload.d);
+                            break;
+                        case 'INTERACTION_CREATE':
+                            switch (payload.d.type) {
+                                case 1:
+                                    // Ping... Pong!
+                                    fetch(`https://discord.com/api/v10/interactions/${payload.d.id}/${payload.d.token}/callback`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ type: 1 })
+                                    });
+                                    break;
+                                case 2:
+                                    this.emit("newSlash", payload.d);
+                                    break;
+                                case 3:
+                                    this.emit("newComponent", payload.d);
+                                    break;
+                                case 4:
+                                    this.emit("newAutocomplete", payload.d);
+                                    break;
+                                case 5:
+                                    this.emit("newModal", payload.d);
+                                    break;
+                                default:
+                                    console.warn(`Unknown type: ${payload.d.type}.`);
+                                    break;
+                                    break;
+                            }
+                            ;
                     }
                 case 11:
                     break;

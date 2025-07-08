@@ -1,3 +1,8 @@
+interface ISendOptions {
+  content: string;
+  flags?: number;
+}
+
 interface PrimaryGuild {
   tag: string;
   identity_guild_id: string;
@@ -79,7 +84,7 @@ export class Message {
     Object.assign(this, data);
 
     this.client = {
-      token: token ?? "none"
+      token: token ?? 'none',
     };
 
     if (this.nonce != null) {
@@ -95,14 +100,18 @@ export class Message {
   }
 
   /** @param {string} content - The text to send */
-  async send(content: string) {
+  async send(content: string | ISendOptions) {
     await fetch(`https://discord.com/api/v10/channels/${this.channel_id}/messages`, {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bot ${this.client.token}`,
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ content })
+      body: JSON.stringify(
+        typeof content === 'string'
+          ? { content, flags: 0 }
+          : { content: content.content, flags: content.flags ?? 0 },
+      ),
     });
   }
 }

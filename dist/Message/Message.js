@@ -49,7 +49,9 @@ class Message {
                 Authorization: `Bot ${this.client.token}`,
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ content })
+            body: JSON.stringify(typeof content === "string"
+                ? { content, flags: 0 }
+                : { content: content.content, flags: content.flags ?? 0 })
         });
     }
 }
